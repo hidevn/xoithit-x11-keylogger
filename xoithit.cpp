@@ -26,38 +26,44 @@ int main(int argc, char* argv[]){
     Display *disp = XOpenDisplay(NULL);
     Window activeWindow = -1;
     char* active;
-	bool running = true;
     char buf[17];
     KeySym ks;
     XComposeStatus comp;
     int len;
     int revert;
-    int c = 0;
     string activeName;
     Window root = DefaultRootWindow(disp);
     XGetInputFocus (disp, &activeWindow, &revert);
     XSelectInput(disp, activeWindow, KeyPressMask|KeyReleaseMask|FocusChangeMask);
     active = name(disp, activeWindow);
-    while (running) {
+	if (active != NULL) cout << string(active);
+    while (1) {
         XEvent ev;
         XNextEvent(disp, &ev);
         switch (ev.type) {
             case FocusOut: 
             {
-                // if (activeWindow != root)
-                //     XSelectInput(disp, activeWindow, 0);
-                // FUCK THIS SHIT
                 XGetInputFocus (disp, &activeWindow, &revert);
+				if (activeWindow == 1) break;
                 if (name(disp,activeWindow) != NULL){
-                    cout << "Changed to " ;
-                    active = name(disp,activeWindow);
-                    cout<<string(active);
-                    cout<<endl;
+					if (active == NULL){
+						active = name(disp,activeWindow);
+					}
+					else {
+						string old = string(active);                    
+						active = name(disp,activeWindow);
+						if ( old.compare(string(active)) != 0){
+				            cout << "Changed to ";
+							cout<<string(active);
+				            cout<<endl;
+						}
+					}
                 }
                 if (activeWindow == PointerRoot) {
                     activeWindow = root;
-                }                
-                XSelectInput(disp, activeWindow, KeyPressMask|KeyReleaseMask|FocusChangeMask);
+                }       
+				XGetInputFocus (disp, &activeWindow, &revert);        
+                XSelectInput(disp, activeWindow, KeyPressMask|KeyReleaseMask|FocusChangeMask);	 
                 break;
             }
 
